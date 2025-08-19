@@ -1,0 +1,303 @@
+---
+title: "Introducing Execution+: Measuring Decision Making on the Pitcher's Mound"
+author:
+  - name: Leo Tesler
+date: today
+
+format:
+  html:
+    toc: true
+    embed-resources: true
+    
+execute:
+  echo: false
+  warning: false
+
+from: markdown+emoji 
+reference-location: margin
+citation-location: margin
+---
+
+## Introduction: What is Execution+?
+
+Execution+ is a pitching model that grades how well a pitch was executed, based on numerous underlying qualities of the pitch and the situation in which it was thrown. 
+
+Like other baseball stats ending in "+", such as OPS+, wRC+, and Stuff+, Execution+ is scaled so that an averagely-executed pitch has a value of 100, with better pitches rating above 100 and worse pitches rating below 100.
+
+In contrast to other popular pitching models such as Stuff+, Execution+ is not solely dependent on characteristics of the pitch like velocity, spin, and movement and how likely a batter is to miss or make contact with it. As touched on above, Execution+ also takes into account the count in which a pitch was thrown, how many outs are in the inning, the handedness of the opposing batter, and a few other game state data points.
+
+I believe that Execution+ is a good predictor of how well a pitch was executed, based on the outcome of the pitch, and that it can help to explain why pitchers with good stuff don't always get good results, and vice versa. This is my first major modeling project with baseball data, and I will refine and update the Execution+ model as necessary.
+
+## Data Overview
+
+### Dataset
+
+The Execution+ model is trained on pitch-level data from the 2023 MLB season and postseason, obtained via [Baseball Savant's search tool](https://baseballsavant.mlb.com/statcast_search).
+
+The initial dataset was extremely large, with over 700,000 pitches being included, and over 90 variables available to predict with. I pared the number of observations down to around 100,000 using stratified random sampling, then split the data into a training and testing set from there, again stratifying by the target variable. In addition, I utilized v-fold cross-validation to separate the data into folds to prevent overfitting in the modeling process.
+
+### Target variable
+
+To serve as the target variable in which a good or bad pitch outcome would be based upon, I initially decided on change in run expectancy, which measures the change in the amount of runs the batting team is expected to score based on the change in game state brought upon by the pitch.
+
+However, in exploring that target variable, provided in the Baseball Savant dataset, I discovered that the mean change in run expectancy varied somewhat significantly from pitch to pitch.
+
+```{r}
+#| label: tbl-run-exp-pitch-type
+#| tbl-cap: Mean change in run expectancy by pitch type
+
+## Calculating Outcome Grade
+
+# load libraries ----
+library(tidyverse)
+library(tidymodels)
+library(naniar)
+library(DT)
+library(kableExtra)
+
+# load data ----
+savant_data <- read_csv("data/mlb_23/savant_data.csv") |> 
+  mutate(delta_run_exp = -delta_run_exp,
+         across(where(is.character), as.factor))
+
+savant_data |> 
+  group_by(pitch_type) |> 
+  summarize(mean_run_exp = mean(delta_run_exp, na.rm = TRUE),
+            n = n()) |> 
+  filter(!is.na(pitch_type)) |> 
+  arrange(desc(mean_run_exp)) |> 
+  kable(digits = 4)
+```
+
+@tbl-run-exp-pitch-type shows the mean change in run expectancy by pitch, inverted so that positive values are better for pitchers. Breaking pitches tend to have higher marks due to their higher tendency to make batters whiff, and because they are thrown in the zone less and are therefore less likely to cause damage. Four-seam fastballs, knuckleballs, and slow curves tend to have lower marks because they are thrown in the zone more and missed less.
+
+To solve for this discrepancy that could lean the model towards more of a measure of pure stuff, I instead decided to use a variation of change in run expectancy, a manually calculated variable called run expectancy above average. This simply takes the change in run expectancy of a pitch, and subtracts the mean run expectancy of all pitches of that type. This way, pitches will be graded equally as favorably regardless of pitch type.
+
+## Methods
+
+### Feature engineering
+
+Each model type tested for Execution+ was fit using two separate recipes; a barebones recipe with minimal feature engineering, and a more complex recipe with more feature engineering.
+
+The basic recipe for both parametric and non-parametric model types included the imputation of NA values by median for numeric variables and mode for categorial variables, one-hot dummy encoding for categorical variables, removal of variables with little to no variance, and centering and scaling of all variables.
+
+The complex recipe for both parametric and non-parametric model types included all of the above steps, ran on a dataset in which some variables were filtered out after being deemed unimportant by a lasso variable selection model. In addition, this recipe included an interaction step between all variables (excluded in non-parametric model types), and the removal of any variable with an R^2^ over 0.9 with any other variable.
+
+### Model types
+
+In the process of finding the best fitting model for Execution+, I tested 10 different model types, plus an ensemble model made from the tuning results separated by recipe.
+
+The model types I used are part of the parsnip package in R, and include a null model (to establish a baseline), ordinary linear model, elastic net model, k-nearest neighbors model, random forest model, boosted tree model, svm poly model, svm rbf model, mars model, and mlp model.
+
+For every model except the null and ordinary linear models, I tuned all parameters across wide intervals using a latin hypercube for the tuning grid.
+
+## Results
+
+```{r}
+#| label: tbl-results
+#| tbl-cap: Model results
+## Tuning Results
+
+# load libraries ----
+library(tidyverse)
+library(tidymodels)
+library(doMC)
+library(DT)
+
+# load data ----
+load("results/null_fit.rda")
+load("results/lm_fit_feat.rda")
+load("results/lm_fit_sink.rda")
+load("results/en_tuned_feat.rda")
+load("results/en_tuned_sink.rda")
+load("results/bt_tuned_basic.rda")
+load("results/bt_tuned_complex.rda")
+load("results/rf_tuned_sink.rda")
+load("results/rf_tuned_feat.rda")
+load("results/knn_tuned_basic.rda")
+load("results/knn_tuned_complex.rda")
+load("results/nn_tuned_basic.rda")
+load("results/nn_tuned_complex.rda")
+load("results/mars_tuned_basic.rda")
+load("results/mars_tuned_complex.rda")
+
+load("samples/pitch_train.rda")
+
+# prefer tidymodels ----
+tidymodels_prefer()
+
+# displaying results
+null_tbl <- null_fit |> 
+  show_best(metric = "rmse") |> 
+  slice_min(mean) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "null",
+         recipe = "basic",
+         .before = 1)
+
+lm_sink_tbl <- lm_fit_sink |> 
+  show_best(metric = "rmse") |> 
+  slice_min(mean) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "OLM",
+         recipe = "basic",
+         .before = 1)
+
+lm_feat_tbl <- lm_fit_feat |> 
+  show_best(metric = "rmse") |> 
+  slice_min(mean) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "OLM",
+         recipe = "complex",
+         .before = 1)
+
+en_sink_tbl <- en_tuned_sink |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "EN",
+         recipe = "basic",
+         .before = 1)
+
+en_feat_tbl <- en_tuned_feat |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "EN",
+         recipe = "complex",
+         .before = 1)
+
+bt_sink_tbl <- bt_tuned_basic |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "boosted tree",
+         recipe = "basic",
+         .before = 1)
+
+bt_feat_tbl <- bt_tuned_complex |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "boosted tree",
+         recipe = "complex",
+         .before = 1)
+
+rf_sink_tbl <- rf_tuned_sink |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "random forest",
+         recipe = "basic",
+         .before = 1)
+
+rf_feat_tbl <- rf_tuned_feat |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "random forest",
+         recipe = "complex",
+         .before = 1)
+
+knn_sink_tbl <- knn_tuned_basic |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "knn",
+         recipe = "basic",
+         .before = 1)
+
+knn_feat_tbl <- knn_tuned_complex |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "knn",
+         recipe = "complex",
+         .before = 1)
+
+nn_sink_tbl <- nn_tuned_basic |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "nn",
+         recipe = "basic",
+         .before = 1)
+
+nn_feat_tbl <- nn_tuned_complex |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "nn",
+         recipe = "complex",
+         .before = 1)
+
+mars_sink_tbl <- mars_tuned_basic |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "mars",
+         recipe = "basic",
+         .before = 1)
+
+mars_feat_tbl <- mars_tuned_complex |> 
+  show_best(metric = "rmse") |> 
+  slice_head(n = 1) |> 
+  select(mean, n, std_err) |> 
+  mutate(model = "mars",
+         recipe = "complex",
+         .before = 1)
+
+bind_rows(null_tbl,
+          lm_sink_tbl, lm_feat_tbl,
+          en_sink_tbl, en_feat_tbl,
+          bt_sink_tbl, bt_feat_tbl,
+          rf_sink_tbl, rf_feat_tbl,
+          knn_sink_tbl, knn_feat_tbl,
+          nn_sink_tbl, nn_feat_tbl,
+          mars_sink_tbl, mars_feat_tbl) |> 
+  arrange(mean) |> 
+  mutate(RMSE = mean,
+         .after = 1) |>
+  select(model, recipe, RMSE, std_err) |> 
+  kable(digits = 3)
+```
+
+@tbl-results shows that the boosted tree models were in fact the most accurate predictors of run expectancy above average out of all the model types. The RMSE of around 0.15 is quite small compared to the target variable range of 4.48, showing a discrepancy of about 3% on average between the observed and predicted values. 
+
+The ensemble models, not shown above, did predict slightly better, but due to their incredibly large size and slow runtime, I decided to move forward with the complex boosted tree model as the winning model.
+
+## Exploring predictions
+
+So, who has the best-executed pitches in baseball?
+
+```{r}
+#| label: tbl-best-pitches
+#| tbl-cap: Best pitches by Execution+ (min. 500 pitches thrown)
+
+library(here)
+
+# load predictions ----
+predictions <- read_csv(here("predictions/mlb_2024.csv")) |> 
+  mutate(pitch_grade = (pitch_grade/mean(pitch_grade, na.rm = TRUE)*100))
+
+predictions |> 
+  group_by(pitcher_name, pitch_type) |> 
+  summarize(execution_plus = mean(pitch_grade, na.rm = TRUE),
+            avg_velo = mean(release_speed, na.rm = TRUE),
+            avg_spin = mean(release_spin_rate, na.rm = TRUE),
+            n = n()) |> 
+  arrange(desc(execution_plus)) |> 
+  filter(n >= 500) |> 
+  head(n = 10) |> 
+  kable(digits = 0)
+```
+
+A look at @tbl-best-pitches shows Mason Miller's 4-seam fastball right at the top of the list of pitches thrown more than 500 times this season. That makes logical sense, but a look further down the list shows that Kyle Hendricks, who has the worst ERA out of any pitcher who has thrown 100 innings this year, has both his changeup and sinker in the top ten best executed pitches.
+
+This is clearly not because of stuff, as Hendricks' career has been defined by his ability to get the most out of objectively bad stuff, but likely has more to do with where these pitches are thrown and when he chooses to use them. A quick look at Hendricks' heat map shows his red zones on the edges of the plate, meaning these pitches probably get hit into play a lot.
+
+But while the model predicts that these balls in play will be easy outs that will decrease the hitting team's run expectancy, Hendricks' pitches end up causing more damage, perhaps due to the lack of velocity or high spin, and/or his defense failing him.
+
+I believe that the model's infatuation with Hendricks is a testament to its ability to measure execution somewhat independent of stuff. It's not Hendricks' execution that is leading to his poor results, it's that he is executing very well but some other aspect of his pitches are failing him. After all, his pitches are surrounded by some of the game's most revered, like Miller's fastball, Tyler Anderson's and Michael Wacha's changeups, and Cade Smith's fastball.
+
+Overall, what I believe Execution+ shows is not necessarily that the best pitchers are the ones that execute the best, but rather that some pitchers outperform their stuff instead of relying on it, and vice versa.

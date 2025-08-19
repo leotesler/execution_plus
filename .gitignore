@@ -1,0 +1,9 @@
+# .gitignore
+
+data/
+results/
+samples/
+*.rda
+
+.Rhistory
+.Rproj.user/
