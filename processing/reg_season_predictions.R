@@ -87,16 +87,18 @@ predictions <- predictions |>
   left_join(hitter_ids, by = join_by(batter == hitter_id))
 
 predictions <- predictions |> 
-  mutate(pitch_grade = percent_rank(predicted_reaa)*100) |> 
+  mutate(percentile_rank = percent_rank(predicted_reaa)*100) |> 
   mutate(pitcher_name = if_else(is.na(pitcher_name), batter_name, pitcher_name)) |> 
   select(!batter_name) |> 
   mutate(batter_name = hitter_name) |> 
   select(!hitter_name) |> 
   mutate(balls = as.numeric(balls),
-         strikes = as.numeric(strikes))
+         strikes = as.numeric(strikes),
+         pfx_z = pfx_z * 12,
+         pfx_x = pfx_x * 12)
 
 predictions <- bind_rows(predictions, prior_preds) |> 
-  mutate(pitch_grade = (pitch_grade/mean(pitch_grade, na.rm = TRUE)*100),
+  mutate(pitch_grade = (percentile_rank/mean(percentile_rank, na.rm = TRUE)*100),
          pitch_type = factor(pitch_type))
 
 # process data for summaries ----
@@ -109,9 +111,7 @@ predictions <- predictions |>
          whiff = description %in% whiff_code,
          in_zone = zone < 10,
          out_zone = zone > 10,
-         chase = !in_zone & swing,
-         pfx_z = pfx_z * 12,
-         pfx_x = pfx_x * 12)
+         chase = !in_zone & swing)
 
 df_statcast_grouped <- predictions |>
   filter(!is.na(pitch_type)) |>
@@ -175,3 +175,7 @@ predictions |>
   group_walk(~ {
     saveRDS(.x, paste0("ExecutionPlusApp/predictions/", .y$id, ".rds"))
   })
+
+# re-deploy app ----
+setwd("~/Desktop/Baseball R Projects/Pitching Models/ExecutionPlusApp")
+rsconnect::deployApp()
