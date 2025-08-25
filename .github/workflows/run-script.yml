@@ -15,8 +15,17 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         
+      - name: Install system dependencies
+        run: sudo apt-get update -y && sudo apt-get install -y \
+          libcurl4-openssl-dev \
+          libssl-dev \
+          libxml2-dev \
+          libpng-dev \
+          libjpeg-dev \
+          libfreetype6-dex
+        
       - name: Install packages
-        run: Rscript -e 'install.packages(c("tidyverse", "tidymodels", "here", "showtext", "httr", "magick", "grid", "gridExtra", "jsonlite", "zoo", "scales", "shiny", "rsconnect", "baseballr"))'
+        run: Rscript -e 'install.packages(c("tidyverse", "tidymodels", "here", "showtext", "httr", "magick", "grid", "gridExtra", "jsonlite", "zoo", "scales", "shiny", "rsconnect", "baseballr"), repos="https://cloud.r-project.org")'
         
       - name: Run script
         run: Rscript processing/reg_season_predictions.R
