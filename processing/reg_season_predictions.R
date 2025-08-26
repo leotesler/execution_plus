@@ -4,7 +4,6 @@
 library(tidyverse)
 library(tidymodels)
 library(here)
-library(stacks)
 library(baseballr)
 library(rvest)
 
