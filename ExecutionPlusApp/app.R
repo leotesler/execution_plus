@@ -718,7 +718,8 @@ server <- function(input, output, session) {
     req(pitcher_id())
     file_path <- paste0("predictions/", pitcher_id(), ".rds")
     message("Attempting to load: ", file_path)
-    readRDS(file_path)
+    readRDS(file_path) |> 
+      mutate(game_date = as.Date(game_date))
   })
   
   
