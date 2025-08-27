@@ -53,25 +53,25 @@ hitter_ids <- bind_rows(hitters) |>
   distinct(hitter_id, hitter_name)
 
 # clean new data ----
-compiled_data <- compiled_data |> 
+compiled_data_new <- compiled_data |> 
   mutate(across(where(is.character), as.factor),
          balls = factor(balls),
          strikes = factor(strikes),
          delta_run_exp = -delta_run_exp)
 
-mean_run_exp <- compiled_data |> 
+mean_run_exp <- compiled_data_new |> 
   group_by(pitch_type) |> 
   summarize(mean_run_exp = mean(delta_run_exp, na.rm = TRUE),
             n = n()) |> 
   arrange(mean_run_exp)
 
-compiled_data <- compiled_data |> 
+compiled_data_expanded <- compiled_data_new |> 
   left_join(mean_run_exp, by = join_by(pitch_type == pitch_type)) |> 
   mutate(run_exp_above_avg = delta_run_exp - mean_run_exp)
 
 # generate predictions ----
-predictions <- compiled_data |> 
-  bind_cols(predict(bt_fit_final, compiled_data)) |>
+predictions <- compiled_data_expanded |> 
+  bind_cols(predict(bt_fit_final, compiled_data_expanded)) |>
   mutate(predicted_reaa = .pred) |> 
   select(!.pred)
 
@@ -86,7 +86,6 @@ predictions <- predictions |>
   left_join(hitter_ids, by = join_by(batter == hitter_id))
 
 predictions <- predictions |> 
-  mutate(percentile_rank = percent_rank(predicted_reaa)*100) |> 
   mutate(pitcher_name = if_else(is.na(pitcher_name), batter_name, pitcher_name)) |> 
   select(!batter_name) |> 
   mutate(batter_name = hitter_name) |> 
@@ -97,7 +96,8 @@ predictions <- predictions |>
          pfx_x = pfx_x * 12)
 
 predictions <- bind_rows(predictions, prior_preds) |> 
-  mutate(pitch_grade = (percentile_rank/mean(percentile_rank, na.rm = TRUE)*100),
+  mutate(percentile_rank = percent_rank(predicted_reaa)*100,
+         pitch_grade = (percentile_rank/mean(percentile_rank, na.rm = TRUE)*100),
          pitch_type = factor(pitch_type))
 
 # process data for summaries ----
