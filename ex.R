@@ -11,12 +11,9 @@ years <- c(2004:2025)
 
 transactions <- map_df(years, function(x) {mlb_people_free_agents(x)})
 
-players <- chadwick_player_lu()
-
-players |> 
-  filter(mlb_played_last == 2025) |> 
-  select(name_last, name_first, key_mlbam) |> 
-  mutate(name = str_c(name_first, name_last, sep = " ")) |> 
-  select(name, id = key_mlbam)
-
-
+predictions |> 
+  group_by(pitcher_name, pitch_type) |> 
+  summarize(pitch_grade = mean(pitch_grade, na.rm = TRUE),
+            n = n()) |> 
+  filter(n >= 500, pitch_type == "FF") |> 
+  arrange(desc(pitch_grade))
