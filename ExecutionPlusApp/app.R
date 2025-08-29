@@ -540,12 +540,20 @@ metric_table <- function(pred_df,
   
   display_pred <- cbind(pitch_name = plot_pred$pitch_type, formatted_pred)
   
+  pitch_col_vector <- left_join(
+    tibble::tibble(pitch = plot_pred$pitch_type),
+    pitch_colors,
+    by = c("pitch" = "code")
+  )$color
+  
+  pitch_col_vector[is.na(pitch_col_vector)] <- "#FFFFFF"
+  
   n_color <- ncol(color_matrix)
   n_display <- ncol(display_pred)
   n_noncolor <- n_display - n_color - 1
   
   color_matrix_full <- cbind(
-    rep("#FFFFFF", nrow(color_matrix)),
+    pitch_col_vector,#rep("#FFFFFF", nrow(color_matrix))
     color_matrix,
     matrix("#FFFFFF", nrow = nrow(color_matrix), ncol = n_noncolor)
   )
