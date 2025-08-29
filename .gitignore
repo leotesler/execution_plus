@@ -5,5 +5,7 @@ results/
 samples/
 *.rda
 
+!results/bt_fit_final.rda
+
 .Rhistory
 .Rproj.user/
