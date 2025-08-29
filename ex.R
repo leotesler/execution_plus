@@ -15,11 +15,12 @@ transactions <- map_df(years, function(x) {mlb_people_free_agents(x)})
 # pull spotrac data ----
 url <- "https://www.spotrac.com/mlb/new-york-yankees/yearly/_/sort/cap_total2/view/roster"
 
-response <- GET(url)
+response <- GET(url, add_headers(`User-Agent` = "Mozilla/5.0"))
 
-html <- read_html(content(response, "text", encoding = "UTF-8"))
+page <- read_html(content(response, "text", encoding = "UTF-8"))
 
-tables <- html_table(html, fill = TRUE)
+rows <- page |> 
+  html_elements(".team-roster__row")
 
 # explore ----
 predictions |> 
