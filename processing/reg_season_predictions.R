@@ -7,6 +7,13 @@ library(here)
 library(baseballr)
 library(rvest)
 
+# check date ----
+end_date <- as.Date("2025-09-29")
+
+if (Sys.Date() > end_date) {
+  quit(save = "no")
+}
+
 # load model and data ----
 load(here("results/bt_fit_final.rda"))
 prior_preds <- readRDS("predictions/mlb_2025.rds")
