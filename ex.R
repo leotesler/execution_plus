@@ -47,6 +47,14 @@ for (team_name in teams) {
 
 contract_data <- bind_rows(contract_data)
 
+contract_data |> 
+  pivot_longer(cols = starts_with("player"), values_to = "player") |> 
+  separate(player, into = c("delete", "player"), sep = "\\n\\n ") |> 
+  select(!delete) |> 
+  mutate(player = trimws(player)) |> 
+  filter(is.na(player)) |> 
+  print(n = Inf)
+
 # explore ----
 predictions |> 
   group_by(pitcher_name, pitch_type) |> 
