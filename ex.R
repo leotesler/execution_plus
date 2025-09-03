@@ -37,9 +37,11 @@ for (team_name in teams) {
   
   tables <- page |> 
     html_elements("table") |> 
-    html_table(fill = TRUE)
+    html_table(fill = TRUE) |> 
+    keep(~ any(grepl("Player", names(.x))) && nrow(.x) > 0) |> 
+    map(~ mutate(.x, across(everything(), as.character)))
   
-  contract_status <- tables[[2]] |> 
+  contract_status <- bind_rows(tables) |> 
     janitor::clean_names()
   
   contract_data[[team_name]] <- contract_status
@@ -47,13 +49,22 @@ for (team_name in teams) {
 
 contract_data <- bind_rows(contract_data)
 
-contract_data |> 
+# clean data ----
+contract_clean <- contract_data |> 
   pivot_longer(cols = starts_with("player"), values_to = "player") |> 
   separate(player, into = c("delete", "player"), sep = "\\n\\n ") |> 
   select(!delete) |> 
   mutate(player = trimws(player)) |> 
-  filter(is.na(player)) |> 
+  filter(!is.na(player)) |> 
   print(n = Inf)
+
+# get free agent year ----
+contract_clean |> 
+  rowwise() |> 
+  mutate(when_free_agent = names(contract_clean)[which(c_across(everything()) == "UFA")[1]]) |> 
+  ungroup() |> 
+  filter(is.na(when_free_agent)) |> 
+  select(player, when_free_agent, x2025:x2039)
 
 # explore ----
 predictions |> 
