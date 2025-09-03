@@ -1,10 +1,12 @@
 # .gitignore
 
 data/
-results/
 samples/
+
 *.rda
 
+!results/
+results/*
 !results/bt_fit_final.rda
 
 .Rhistory
