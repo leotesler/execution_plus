@@ -28,13 +28,18 @@ jobs:
             magick
             zoo
             here
-            baseballr
             rvest
             gridExtra
             scales
             shiny
             rsconnect
             showtext
-
+            
+      - name: Install remotes
+        run: Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
+        
+      - name: Install baseballr
+        run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
+        
       - name: Run script
         run: Rscript processing/reg_season_predictions.R
