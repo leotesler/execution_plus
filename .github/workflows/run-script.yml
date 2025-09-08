@@ -39,7 +39,9 @@ jobs:
         run: Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
         
       - name: Install baseballr
-        run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
+        run: Rscript -e 'remotes::install_github("BillPetti/baseballr", auth_token = Sys.getenv("GITHUB_TOKEN"))'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Run script
         run: Rscript processing/reg_season_predictions.R
