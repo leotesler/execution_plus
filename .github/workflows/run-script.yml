@@ -34,6 +34,7 @@ jobs:
             shiny
             rsconnect
             showtext
+            xgboost
             
       - name: Install remotes
         run: Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
