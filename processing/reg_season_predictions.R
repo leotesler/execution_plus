@@ -183,5 +183,4 @@ predictions |>
   })
 
 # re-deploy app ----
-setwd("~/Desktop/Baseball R Projects/Pitching Models/ExecutionPlusApp")
-rsconnect::deployApp()
+rsconnect::deployApp(appDir = "ExecutionPlusApp")
