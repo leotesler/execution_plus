@@ -1,0 +1,203 @@
+# regular season predictions
+
+# load libraries ----
+library(tidyverse)
+library(tidymodels)
+library(here)
+library(baseballr)
+library(rvest)
+library(googledrive)
+
+# check date ----
+end_date <- as.Date("2025-09-29")
+
+if (Sys.Date() > end_date) {
+  quit(save = "no")
+}
+
+# load model and data ----
+load(here("results/bt_fit_final.rda"))
+prior_preds <- readRDS("predictions/mlb_2025.rds")
+
+days <- c(as.character(seq(as.Date("2025-03-18"), as.Date("2025-03-19"), by = "days")),
+          as.character(seq(as.Date("2025-03-27"), as.Date(today() - 1), by = "days")))
+
+days <- as.character(seq(max(prior_preds$game_date) + 1, Sys.Date() - 1, by = "day"))
+
+pitchers <- list()
+
+for (i in days) {
+  pitcher_data <- statcast_search_pitchers(start_date = i, end_date = i) |> 
+    filter(game_type == "R")
+  
+  if (nrow(pitcher_data) != 0) {
+  pitchers[[as.character(i)]] <- pitcher_data
+  }
+}
+
+compiled_data <- bind_rows(pitchers)
+
+pitcher_ids <- compiled_data |> 
+  mutate(pitcher_id = pitcher,
+         pitcher_name = player_name) |> 
+  select(pitcher_id, pitcher_name) |> 
+  distinct(pitcher_id, pitcher_name)
+
+hitters <- list()
+
+for (i in days) {
+  hitter_data <- statcast_search_batters(start_date = i, end_date = i) |> 
+    filter(game_type == "R")
+  
+  if (nrow(hitter_data) != 0) {
+  hitters[[as.character(i)]] <- hitter_data
+  }
+}
+
+hitter_ids <- bind_rows(hitters) |> 
+  mutate(hitter_id = batter,
+         hitter_name = player_name) |> 
+  select(hitter_id, hitter_name) |> 
+  distinct(hitter_id, hitter_name)
+
+# clean new data ----
+compiled_data_new <- compiled_data |> 
+  mutate(across(where(is.character), as.factor),
+         balls = factor(balls),
+         strikes = factor(strikes),
+         delta_run_exp = -delta_run_exp)
+
+mean_run_exp <- compiled_data_new |> 
+  group_by(pitch_type) |> 
+  summarize(mean_run_exp = mean(delta_run_exp, na.rm = TRUE),
+            n = n()) |> 
+  arrange(mean_run_exp)
+
+compiled_data_expanded <- compiled_data_new |> 
+  left_join(mean_run_exp, by = join_by(pitch_type == pitch_type)) |> 
+  mutate(run_exp_above_avg = delta_run_exp - mean_run_exp)
+
+# generate predictions ----
+predictions <- compiled_data_expanded |> 
+  bind_cols(predict(bt_fit_final, compiled_data_expanded)) |>
+  mutate(predicted_reaa = .pred) |> 
+  select(!.pred)
+
+predictions <- predictions |> 
+  left_join(pitcher_ids, by = join_by(pitcher == pitcher_id)) |>
+  mutate(pitcher_team = if_else(inning_topbot == "Bot", away_team, home_team),
+         opponent = if_else(inning_topbot == "Top", away_team, home_team),
+         id = pitcher,
+         batter_name = player_name) |> 
+  select(!pitcher) |> 
+  select(!player_name) |> 
+  left_join(hitter_ids, by = join_by(batter == hitter_id))
+
+predictions <- predictions |> 
+  mutate(pitcher_name = if_else(is.na(pitcher_name), batter_name, pitcher_name)) |> 
+  select(!batter_name) |> 
+  mutate(batter_name = hitter_name) |> 
+  select(!hitter_name) |> 
+  mutate(balls = as.numeric(balls),
+         strikes = as.numeric(strikes),
+         pfx_z = pfx_z * 12,
+         pfx_x = pfx_x * 12)
+
+predictions <- bind_rows(predictions, prior_preds) |> 
+  mutate(percentile_rank = percent_rank(predicted_reaa)*100,
+         pitch_grade = (percentile_rank/mean(percentile_rank, na.rm = TRUE)*100),
+         pitch_type = factor(pitch_type))
+
+# process data for summaries ----
+swing_code <- c("bunt_foul_tip", "foul", "foul_bunt", "foul_tip",
+                "hit_into_play", "missed_bunt", "swinging_strike", "swinging_strike_blocked")
+whiff_code <- c("swinging_strike", "swinging_strike_blocked", "foul_tip")
+
+predictions <- predictions |> 
+  mutate(swing = description %in% swing_code,
+         whiff = description %in% whiff_code,
+         in_zone = zone < 10,
+         out_zone = zone > 10,
+         chase = !in_zone & swing)
+
+df_statcast_grouped <- predictions |>
+  filter(!is.na(pitch_type)) |>
+  group_by(pitch_type) |>
+  summarize(pitch = n(),
+            release_speed = mean(release_speed, na.rm = TRUE),
+            pfx_z = mean(pfx_z, na.rm = TRUE),
+            pfx_x = mean(pfx_x, na.rm = TRUE),
+            release_spin_rate = mean(release_spin_rate, na.rm = TRUE),
+            release_pos_x = mean(release_pos_x, na.rm = TRUE),
+            release_pos_z = mean(release_pos_z, na.rm = TRUE),
+            release_extension = mean(release_extension, na.rm = TRUE),
+            delta_run_exp = mean(delta_run_exp, na.rm = TRUE),
+            swing = sum(swing, na.rm = TRUE),
+            whiff = sum(whiff, na.rm = TRUE),
+            in_zone = sum(in_zone, na.rm = TRUE),
+            out_zone = sum(out_zone, na.rm = TRUE),
+            chase = sum(chase, na.rm = TRUE),
+            xwoba = mean(estimated_woba_using_speedangle, na.rm = TRUE)) |> 
+  mutate(pitch_usage = pitch/sum(pitch),
+         whiff_rate = whiff/sum(pitch),
+         in_zone_rate = in_zone/sum(pitch),
+         chase_rate = chase/sum(pitch),
+         delta_run_exp_per_100 = (delta_run_exp*100)/sum(pitch))
+
+summary_row <- predictions |> 
+  summarize(pitch = n(),
+            release_speed = mean(release_speed, na.rm = TRUE),
+            pfx_z = mean(pfx_z, na.rm = TRUE),
+            pfx_x = mean(pfx_x, na.rm = TRUE),
+            release_spin_rate = mean(release_spin_rate, na.rm = TRUE),
+            release_pos_x = mean(release_pos_x, na.rm = TRUE),
+            release_pos_z = mean(release_pos_z, na.rm = TRUE),
+            release_extension = mean(release_extension, na.rm = TRUE),
+            delta_run_exp = mean(delta_run_exp, na.rm = TRUE),
+            swing = sum(swing, na.rm = TRUE),
+            whiff = sum(whiff, na.rm = TRUE),
+            in_zone = sum(in_zone, na.rm = TRUE),
+            out_zone = sum(out_zone, na.rm = TRUE),
+            chase = sum(chase, na.rm = TRUE),
+            xwoba = mean(estimated_woba_using_speedangle, na.rm = TRUE)) |> 
+  mutate(pitch_usage = pitch/sum(pitch),
+         whiff_rate = whiff/sum(pitch),
+         in_zone_rate = in_zone/sum(pitch),
+         chase_rate = chase/sum(pitch),
+         delta_run_exp_per_100 = (delta_run_exp*100)/sum(pitch)) |> 
+  mutate(pitch_type = "All",
+         .before = 1)
+
+df_statcast_grouped <- bind_rows(df_statcast_grouped, summary_row)
+
+# save predictions ----
+dir.create("predictions")
+dir.create("ExecutionPlusApp/predictions")
+
+saveRDS(predictions, file = "predictions/mlb_2025.rds")
+saveRDS(df_statcast_grouped, "ExecutionPlusApp/predictions/df_statcast_grouped.rds")
+
+predictions |> 
+  group_by(id) |> 
+  group_walk(~ {
+    saveRDS(.x, paste0("ExecutionPlusApp/predictions/", .y$id, ".rds"))
+  })
+
+# save large file to Google Drive ----
+json_path <- Sys.getenv("GOOGLE_SERVICE_ACCOUNT")
+drive_auth(path = json_path)
+
+local_file <- "predictions/mlb_2025.rds"
+
+folder_id <- "1qowB_L6TfYZWpE4qgNme4yqEv3uWl030"
+
+existing <- drive_ls(as_id(folder_id), pattern = "mlb_2025.rds")
+
+if (nrow(existing) == 0) {
+  drive_upload(local_file, path = as_id(folder_id), name = "mlb_2025.rds")
+} else {
+  drive_update(existing$id, media = local_file)
+}
+
+# re-deploy app ----
+rsconnect::deployApp(appDir = "ExecutionPlusApp")
