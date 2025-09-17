@@ -183,21 +183,5 @@ predictions |>
     saveRDS(.x, paste0("ExecutionPlusApp/predictions/", .y$id, ".rds"))
   })
 
-# save large file to Google Drive ----
-json_path <- Sys.getenv("GOOGLE_SERVICE_ACCOUNT")
-drive_auth(path = json_path)
-
-local_file <- "predictions/mlb_2025.rds"
-
-folder_id <- "1qowB_L6TfYZWpE4qgNme4yqEv3uWl030"
-
-existing <- drive_ls(as_id(folder_id), pattern = "mlb_2025.rds")
-
-if (nrow(existing) == 0) {
-  drive_upload(local_file, path = as_id(folder_id), name = "mlb_2025.rds")
-} else {
-  drive_update(existing$id, media = local_file)
-}
-
 # re-deploy app ----
 rsconnect::deployApp(appDir = "ExecutionPlusApp")
