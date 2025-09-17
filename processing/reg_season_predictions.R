@@ -22,7 +22,7 @@ prior_preds <- readRDS("predictions/mlb_2025.rds")
 days <- c(as.character(seq(as.Date("2025-03-18"), as.Date("2025-03-19"), by = "days")),
           as.character(seq(as.Date("2025-03-27"), as.Date(today() - 1), by = "days")))
 
-days <- as.character(seq(max(prior_preds$game_date) + 1, Sys.Date() - 1, by = "day"))
+days <- as.character(seq(max(prior_preds$game_date) + 1, Sys.Date() - 1, by = "days"))
 
 pitchers <- list()
 

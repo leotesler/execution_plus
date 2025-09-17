@@ -51,8 +51,31 @@ pitch_colors <- tribble(
 dict_color <- setNames(pitch_colors$color, pitch_colors$code)
 dict_pitch <- setNames(pitch_colors$name, pitch_colors$code)
 
+# safe fielder leaders function ----
+safe_fielder_leaders <- function(startseason, endseason) {
+  tryCatch(
+    baseballr::fg_fielder_leaders(startseason = startseason, endseason = endseason),
+    error = function(e) {
+      message("fg_fielder_leaders failed: ", e$message)
+      tibble::tibble(
+        PlayerName = character(),
+        x_mlbamid = character(),
+        pos = character(),
+        inn = numeric()
+      )
+    }
+  )
+}
+
+# then the rest works without crashing (but will produce empty choices if the call failed)
+pitcher_map <- safe_fielder_leaders(startseason = 2025, endseason = 2025) |>
+  janitor::clean_names() |>
+  filter(pos == "P" & inn > 0) |>
+  select(x_mlbamid, player_name)
+
+
 # load pitcher map ----
-pitcher_map <- fg_fielder_leaders(startseason = 2025, endseason = 2025) |>
+pitcher_map <- safe_fielder_leaders(startseason = 2025, endseason = 2025) |>
   janitor::clean_names() |>
   filter(pos == "P" & inn > 0) |>
   select(x_mlbamid, player_name)
