@@ -8,5 +8,3 @@ predictions/
 
 ExecutionPlusApp/predictions/
 
-results/
-!results/bt_fit_final.rda
