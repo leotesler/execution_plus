@@ -59,12 +59,55 @@ contract_clean <- contract_data |>
   print(n = Inf)
 
 # get free agent year ----
-contract_clean |> 
+fill_ufa <- function(df) {
+  n <- ncol(df)
+  
+  for (i in seq_len(n)) {
+    this_col <- df[[i]]
+    
+    if (all(is.na(this_col) | this_col == "")) next
+    
+    for (row in seq_len(nrow(df))) {
+      val <- this_col[row]
+      if (is.na(val) || val == "") next
+      
+      # Skip if "UFA" already exists anywhere in the row
+      if ("UFA" %in% df[row, ]) next
+      
+      # how far to look ahead?
+      offset <- dplyr::case_when(
+        val %in% c("ARB 3", "ARB 4", "\\$") ~ 1,
+        val == "ARB 2" ~ 2,
+        val == "ARB 1" ~ 3,
+        val == "PRE-ARB" ~ 5,
+        TRUE ~ 1  # default
+      )
+      
+      j <- i + offset
+      if (j <= n && (is.na(df[[j]][row]) || df[[j]][row] == "")) {
+        df[[j]][row] <- "UFA"
+      }
+    }
+  }
+  
+  df
+}
+
+contract_cleaner <- contract_clean |> 
   rowwise() |> 
+  fill_ufa() |> 
   mutate(when_free_agent = names(contract_clean)[which(c_across(everything()) == "UFA")[1]]) |> 
   ungroup() |> 
-  filter(is.na(when_free_agent)) |> 
-  select(player, when_free_agent, x2025:x2039)
+  mutate(when_free_agent = if_else(is.na(when_free_agent), "x2040", when_free_agent),
+         when_free_agent = as.numeric(str_replace(when_free_agent, "x", ""))) |> 
+  select(player, when_free_agent) 
+
+fg_data <- fg_batter_leaders(startseason = 2025, endseason = 2025) |> 
+  select(id = xMLBAMID, player = PlayerNameRoute, player_secondary = PlayerName)
+
+contract_cleaner |> 
+  left_join(fg_data, by = join_by(player)) |> 
+  left_join(fg_data, by = join_by(player == player_secondary))
 
 # explore ----
 predictions |> 
