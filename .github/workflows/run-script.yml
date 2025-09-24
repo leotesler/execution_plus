@@ -44,8 +44,11 @@ jobs:
         run: Rscript -e 'remotes::install_github("BillPetti/baseballr", auth_token = Sys.getenv("GITHUB_TOKEN"))'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Predictions Directory
+        run: mkdir -p predictions
           
-      - name: Authenticate Google Drive
+      - name: Download from Google Drive
         run: |
           Rscript -e 'library(googledrive);
                       library(jsonlite);
