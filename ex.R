@@ -109,6 +109,19 @@ contract_cleaner |>
   left_join(fg_data, by = join_by(player)) |> 
   left_join(fg_data, by = join_by(player == player_secondary))
 
+# try to pull from bbref
+url <- "https://www.baseball-reference.com/players/p/pfaadbr01.shtml"
+
+page <- read_html(url)
+
+text <- page |> 
+  html_nodes("p") |> 
+  html_text(trim = TRUE)
+
+node <- text[str_detect(text, "Free Agent")]
+
+as.numeric(str_split_fixed(node, "Free Agent: ", 2)[,2])
+
 # explore ----
 predictions |> 
   group_by(pitcher_name, pitch_type) |> 
