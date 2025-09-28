@@ -44,26 +44,24 @@ jobs:
         run: Rscript -e 'remotes::install_github("BillPetti/baseballr", auth_token = Sys.getenv("GITHUB_TOKEN"))'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Predictions Directory
-        run: mkdir -p predictions
           
-      - name: Download from Google Drive
-        run: |
-          Rscript -e 'library(googledrive);
-                      library(jsonlite);
-                      sa <- jsonlite::fromJSON(Sys.getenv("GDRIVE_SERVICE_ACCOUNT"));
-                      tf <- tempfile(fileext = ".json");
-                      write_json(sa, tf, auto_unbox = TRUE);
-                      drive_auth(path = tf);
-                      
-                      folder_id <- "1qowB_L6TfYZWpE4qgNme4yqEv3uWl030"
-                      
-                      f <- drive_ls(as_id(folder_id), pattern = "mlb_2025.rds")
-                      
-                      drive_download(file = f,
-                                     path = predictions/mlb_2025.rds,
-                                     overwrite = TRUE)'
+      - name: Download existing file from Google Drive
+  run: |
+    mkdir -p predictions
+    Rscript -e "library(googledrive);
+                library(jsonlite);
+                sa <- jsonlite::fromJSON(Sys.getenv('GDRIVE_SERVICE_ACCOUNT'));
+                tf <- tempfile(fileext = '.json');
+                write_json(sa, tf, auto_unbox = TRUE);
+                drive_auth(path = tf);
+
+                folder_id <- '1qowB_L6TfYZWpE4qgNme4yqEv3uWl030'
+                f <- drive_ls(as_id(folder_id), pattern = 'mlb_2025.rds')
+
+                drive_download(file = f,
+                               path = 'predictions/mlb_2025.rds',
+                               overwrite = TRUE)"
+
         env:
           GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
         
