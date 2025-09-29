@@ -4,6 +4,7 @@
 library(tidyverse)
 library(showtext)
 library(httr)
+library(rvest)
 library(magick)
 library(grid)
 library(gridExtra)
@@ -67,18 +68,16 @@ safe_fielder_leaders <- function(startseason, endseason) {
   )
 }
 
-# then the rest works without crashing (but will produce empty choices if the call failed)
-pitcher_map <- safe_fielder_leaders(startseason = 2025, endseason = 2025) |>
-  janitor::clean_names() |>
-  filter(pos == "P" & inn > 0) |>
-  select(x_mlbamid, player_name)
-
-
 # load pitcher map ----
+chadwick <- chadwick_player_lu() |> 
+  select(key_mlbam, key_bbref)
+
 pitcher_map <- safe_fielder_leaders(startseason = 2025, endseason = 2025) |>
   janitor::clean_names() |>
   filter(pos == "P" & inn > 0) |>
-  select(x_mlbamid, player_name)
+  select(x_mlbamid, player_name) |> 
+  left_join(chadwick, by = join_by(x_mlbamid == key_mlbam)) |> 
+  mutate(first_letter = substr(key_bbref, 1, 1))
 
 # existing functions ----
 player_headshot <- function(pitcher_id) {
@@ -130,9 +129,27 @@ player_info <- function(pitcher_id) {
   height <- data$people$height
   weight <- data$people$weight
   
+  map <- pitcher_map[pitcher_map$x_mlbamid == as.numeric(pitcher_id),]
+  
+  url_fa <- paste0("https://www.baseball-reference.com/players/", map$first_letter, "/", map$key_bbref, ".shtml")
+  
+  page <- read_html(url_fa)
+  
+  text <- page |> 
+    html_nodes("p") |> 
+    html_text(trim = TRUE)
+  
+  node <- text[str_detect(text, "Free Agent")]
+  
+  if (is_empty(node)) {
+    fa_year <- "N/A"
+  } else {
+    fa_year <- as.numeric(str_split_fixed(node, "Free Agent: ", 2)[,2]) - 1
+  }
+  
   g <- grobTree(
     textGrob(player_name, y = 0.95, gp = gpar(fontsize = 26, fontface = "bold")),
-    textGrob(paste0(pitcher_hand, "HP, Age: ", age, ", ", height, "/", weight),
+    textGrob(paste0(pitcher_hand, "HP, Age: ", age, ", FA after: ", fa_year),
              y = 0.70, gp = gpar(fontsize = 16)),
     textGrob("Execution+ Season Summary", y = 0.45, gp = gpar(fontsize = 20)),
     textGrob("2025 Regular Season", y = 0.20, gp = gpar(fontsize = 16, fontface = "italic"))
