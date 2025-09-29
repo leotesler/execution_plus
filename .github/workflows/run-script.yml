@@ -1,9 +1,9 @@
 name: Run R Script Daily
 
-on:
-  schedule:
-    - cron: "0 9 * * *"
-  workflow_dispatch: {}
+#on:
+  #schedule:
+    #- cron: "0 9 * * *"
+  #workflow_dispatch: {}
 
 jobs:
   run-r-script:
