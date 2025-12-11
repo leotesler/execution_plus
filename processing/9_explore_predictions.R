@@ -6,9 +6,13 @@ library(here)
 library(DT)
 library(baseballr)
 library(kableExtra)
+library(httr)
+library(rvest)
+library(jsonlite)
+library(googlesheets4)
 
 # load predictions ----
-predictions <- read_csv(here("predictions/mlb_2025.csv")) |> 
+predictions <- read_rds(here("predictions/mlb_2025.rds")) |> 
   mutate(pitch_grade = (pitch_grade/mean(pitch_grade, na.rm = TRUE)*100))
 
 predictions |> 
@@ -32,24 +36,22 @@ predictions |>
   arrange(desc(mean_pitch_grade))
 
 # raw data table
-predictions |> 
-  select(pitcher_name, pitcher_team, pitch_type,
-         game_date, batter, balls, strikes, pitch_grade) |> 
-  arrange(desc(pitch_grade)) |> 
-  filter(strikes == "0",
-         pitch_grade >= 199.5)
+url <- "https://www.fangraphs.com/api/leaders/major-league/data?age=&pos=all&stats=pit&lg=all&qual=0&season=2025&season1=2025&startdate=2025-03-01&enddate=2025-11-01&month=0&hand=&team=0&pageitems=300000&pagenum=1&ind=0&rost=0&players=&type=8&postseason=&sortdir=default&sortstat=WAR"
+response <- GET(url)
+page <- content(response, as = "text", encoding = "UTF-8")
+data <- fromJSON(page)
+fg_data <- as.tibble(data$data) |> 
+  janitor::clean_names() |> 
+  select(x_mlbamid, player_name, tbf)
 
-# qualified pitchers cumulative exeuction+
-qual_pitchers <- fg_pitcher_leaders(pos = "all", qual = "0", startseason = "2024", endseason = "2024") |> 
-  select(xMLBAMID, GS, IP, Throws) |> 
-  filter(GS == 0, IP >= 50, Throws == "L")
+player_ep_mlb <- predictions |> 
+  group_by(id, pitcher_name) |> 
+  summarize(execution_plus = mean(pitch_grade, na.rm = TRUE)) |> 
+  select(!pitcher_name) |> 
+  left_join(fg_data, by = join_by(id == x_mlbamid))
 
-predictions |> 
-  group_by(pitcher_name, pitcher) |> 
-  summarize(mean_pitch_grade = mean(pitch_grade, na.rm = TRUE),
-            avg_velo = mean(release_speed, na.rm = TRUE),
-            avg_spin = mean(release_spin_rate, na.rm = TRUE),
-            n = n()) |> 
-  left_join(qual_pitchers, by = join_by(pitcher == xMLBAMID)) |> 
-  filter(!is.na(IP)) |> 
-  arrange(desc(mean_pitch_grade))
+save(player_ep_mlb, file = "processing/player_ep_mlb_25.rda")
+
+sheet_write(player_ep, 
+            ss = "1dIH3BHPOGVjCiww6ZSpyLh1TxTNSL7h7pYnd1CYJCiA",
+            sheet = "2025 Execution Plus MLB")

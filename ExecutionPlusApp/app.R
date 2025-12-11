@@ -79,6 +79,20 @@ pitcher_map <- safe_fielder_leaders(startseason = 2025, endseason = 2025) |>
   left_join(chadwick, by = join_by(x_mlbamid == key_mlbam)) |> 
   mutate(first_letter = substr(key_bbref, 1, 1))
 
+# load aaa pitcher map ----
+aaa_pit_url <- "http://statsapi.mlb.com/api/v1/stats?stats=season&sportId=11&season=2025&group=pitching&playerPool=All&limit=20000&offset=0"
+raw <- fromJSON(aaa_pit_url, simplifyVector = FALSE)
+splits <- raw$stats[[1]]$splits
+
+parse_split <- function(x) {
+  tibble(
+    player_id = x$player$id,
+    player_name = x$player$fullName
+  )
+}
+
+aaa_pitcher_map <- map_dfr(splits, parse_split)
+
 # existing functions ----
 player_headshot <- function(pitcher_id) {
   
@@ -739,8 +753,14 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      selectInput("pitcher", "Select a Pitcher:",
+      selectInput("pitcher", "Select a Pitcher (MLB):",
                   choices = pitcher_map$player_name),
+      actionButton("go", "Generate Summary"),
+      
+      tags$hr(),
+      
+      selectInput("pitcher", "Select a Pitcher (AAA):",
+                  choices = aaa_pitcher_map$player_name),
       actionButton("go", "Generate Summary")
     ),
     
