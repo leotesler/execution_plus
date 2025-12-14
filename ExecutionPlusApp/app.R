@@ -128,7 +128,9 @@ player_headshot <- function(pitcher_id) {
   )
 }
 
-player_info <- function(pitcher_id) {
+player_info <- function(pitcher_id, mode = c("MLB", "AAA")) {
+  mode <- match.arg(mode)
+  
   url <- paste0(
     "https://statsapi.mlb.com/api/v1/people?personIds=",
     pitcher_id,
@@ -175,7 +177,7 @@ player_info <- function(pitcher_id) {
     textGrob(paste0(pitcher_hand, "HP, Age: ", age, ", FA after: ", fa_year),
              y = 0.70, gp = gpar(fontsize = 16)),
     textGrob("Execution+ Season Summary", y = 0.45, gp = gpar(fontsize = 20)),
-    textGrob("2025 Regular Season", y = 0.20, gp = gpar(fontsize = 16, fontface = "italic"))
+    textGrob(paste0("2025 ", mode, " Regular Season"), y = 0.20, gp = gpar(fontsize = 16, fontface = "italic"))
   )
   
   return(g)
@@ -658,7 +660,7 @@ metric_table <- function(pred_df,
   return(table_grob)
 }
 
-execution_plus_card <- function(pitcher_id, predictions = predictions) {
+execution_plus_card <- function(pitcher_id, predictions = predictions, mode) {
   color_stats = c("release_speed", "pfx_z", "pfx_x", "release_spin_rate",
                   "delta_run_exp_per_100", "whiff_rate", "chase_rate",
                   "in_zone_rate", "xwoba")
@@ -728,7 +730,7 @@ execution_plus_card <- function(pitcher_id, predictions = predictions) {
   vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
   
   grid.draw(editGrob(player_headshot(pitcher_id), vp = vplayout(2:3, 2:3)))
-  grid.draw(editGrob(player_info(pitcher_id), vp = vplayout(2:3, 4:5)))
+  grid.draw(editGrob(player_info(pitcher_id, mode = mode), vp = vplayout(2:3, 4:5)))
   grid.draw(editGrob(player_logo(pitcher_id), vp = vplayout(2:3, 6:7)))
   
   grid.draw(editGrob(ggplotGrob(execution_plus_bar(predictions)), vp = vplayout(4, 2:3)))
@@ -836,12 +838,14 @@ server <- function(input, output, session) {
     if (mode() == "mlb") {
       execution_plus_card(
         pitcher_id = pitcher_id_mlb(),
-        predictions = predictions_mlb()
+        predictions = predictions_mlb(),
+        mode = "MLB"
       )
     } else if (mode() == "aaa") {
       execution_plus_card(
         pitcher_id = pitcher_id_aaa(),
-        predictions = predictions_aaa()
+        predictions = predictions_aaa(),
+        mode = "AAA"
       )
     }
   })
