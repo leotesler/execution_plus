@@ -91,7 +91,8 @@ parse_split <- function(x) {
   )
 }
 
-aaa_pitcher_map <- map_dfr(splits, parse_split)
+aaa_pitcher_map <- map_dfr(splits, parse_split) |> 
+  mutate(label = paste0(player_name, " (", player_id, ")"))
 
 # existing functions ----
 player_headshot <- function(pitcher_id) {
@@ -143,22 +144,30 @@ player_info <- function(pitcher_id) {
   height <- data$people$height
   weight <- data$people$weight
   
-  map <- pitcher_map[pitcher_map$x_mlbamid == as.numeric(pitcher_id),]
+  if (data$people$currentTeam$id < 108 | data$people$currentTeam$id > 160) {
+    map <- aaa_pitcher_map[aaa_pitcher_map$player_id == as.numeric(pitcher_id),]
+  } else {
+    map <- pitcher_map[pitcher_map$x_mlbamid == as.numeric(pitcher_id),]
+  }
   
-  url_fa <- paste0("https://www.baseball-reference.com/players/", map$first_letter, "/", map$key_bbref, ".shtml")
-  
-  page <- read_html(url_fa)
-  
-  text <- page |> 
-    html_nodes("p") |> 
-    html_text(trim = TRUE)
-  
-  node <- text[str_detect(text, "Free Agent")]
-  
-  if (is_empty(node)) {
+  if (data$people$currentTeam$id < 108 | data$people$currentTeam$id > 160) {
     fa_year <- "N/A"
   } else {
-    fa_year <- as.numeric(str_split_fixed(node, "Free Agent: ", 2)[,2]) - 1
+    url_fa <- paste0("https://www.baseball-reference.com/players/", map$first_letter, "/", map$key_bbref, ".shtml")
+    
+    page <- read_html(url_fa)
+    
+    text <- page |> 
+      html_nodes("p") |> 
+      html_text(trim = TRUE)
+    
+    node <- text[str_detect(text, "Free Agent")]
+    
+    if (is_empty(node)) {
+      fa_year <- "N/A"
+    } else {
+      fa_year <- as.numeric(str_split_fixed(node, "Free Agent: ", 2)[,2]) - 1
+    }
   }
   
   g <- grobTree(
@@ -173,37 +182,37 @@ player_info <- function(pitcher_id) {
 }
 
 mlb_teams <- tribble(
-  ~team, ~logo_url,
-  "AZ", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/ari.png&h=500&w=500",
-  "ATH", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/ath.png&h=500&w=500",
-  "ATL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/atl.png&h=500&w=500",
-  "BAL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/bal.png&h=500&w=500",
-  "BOS", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/bos.png&h=500&w=500",
-  "CHC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/chc.png&h=500&w=500",
-  "CHW", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/chw.png&h=500&w=500",
-  "CIN", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/cin.png&h=500&w=500",
-  "CLE", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/cle.png&h=500&w=500",
-  "COL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/col.png&h=500&w=500",
-  "DET", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/det.png&h=500&w=500",
-  "HOU", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/hou.png&h=500&w=500",
-  "KC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/kc.png&h=500&w=500",
-  "LAA", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/laa.png&h=500&w=500",
-  "LAD", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/lad.png&h=500&w=500",
-  "MIA", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/mia.png&h=500&w=500",
-  "MIL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/mil.png&h=500&w=500",
-  "MIN", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/min.png&h=500&w=500",
-  "NYM", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/nym.png&h=500&w=500",
-  "NYY", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/nyy.png&h=500&w=500",
-  "PHI", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/phi.png&h=500&w=500",
-  "PIT", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/pit.png&h=500&w=500",
-  "SD", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sd.png&h=500&w=500",
-  "SF", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sf.png&h=500&w=500",
-  "SEA", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sea.png&h=500&w=500",
-  "STL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/stl.png&h=500&w=500",
-  "TB", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tb.png&h=500&w=500",
-  "TEX", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tex.png&h=500&w=500",
-  "TOR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tor.png&h=500&w=500",
-  "WSH", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/wsh.png&h=500&w=500"
+  ~team, ~aaa_team, ~logo_url,
+  "AZ", "RNO","https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/ari.png&h=500&w=500",
+  "ATH", "LV", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/ath.png&h=500&w=500",
+  "ATL", "GWN", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/atl.png&h=500&w=500",
+  "BAL", "NOR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/bal.png&h=500&w=500",
+  "BOS", "WOR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/bos.png&h=500&w=500",
+  "CHC", "IOW", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/chc.png&h=500&w=500",
+  "CHW", "CLT", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/chw.png&h=500&w=500",
+  "CIN", "LOU", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/cin.png&h=500&w=500",
+  "CLE", "COL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/cle.png&h=500&w=500",
+  "COL", "ABQ", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/col.png&h=500&w=500",
+  "DET", "TOL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/det.png&h=500&w=500",
+  "HOU", "SUG", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/hou.png&h=500&w=500",
+  "KC", "OMA", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/kc.png&h=500&w=500",
+  "LAA", "SL", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/laa.png&h=500&w=500",
+  "LAD", "OKC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/lad.png&h=500&w=500",
+  "MIA", "JAX", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/mia.png&h=500&w=500",
+  "MIL", "NAS", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/mil.png&h=500&w=500",
+  "MIN", "STP", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/min.png&h=500&w=500",
+  "NYM", "SYR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/nym.png&h=500&w=500",
+  "NYY", "SWB", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/nyy.png&h=500&w=500",
+  "PHI", "LHV", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/phi.png&h=500&w=500",
+  "PIT", "IND", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/pit.png&h=500&w=500",
+  "SD", "ELP", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sd.png&h=500&w=500",
+  "SF", "SAC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sf.png&h=500&w=500",
+  "SEA", "TAC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/sea.png&h=500&w=500",
+  "STL", "MEM", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/stl.png&h=500&w=500",
+  "TB", "DUR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tb.png&h=500&w=500",
+  "TEX", "RR", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tex.png&h=500&w=500",
+  "TOR", "BUF", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/tor.png&h=500&w=500",
+  "WSH", "ROC", "https://a.espncdn.com/combiner/i?img=/i/teamlogos/mlb/500/scoreboard/wsh.png&h=500&w=500"
 )
 
 player_logo <- function(pitcher_id) {
@@ -753,15 +762,18 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
-      selectInput("pitcher", "Select a Pitcher (MLB):",
+      selectInput("pitcher_mlb", "Select a Pitcher (MLB):",
                   choices = pitcher_map$player_name),
-      actionButton("go", "Generate Summary"),
+      actionButton("go_mlb", "Generate Summary (MLB)"),
       
       tags$hr(),
       
-      selectInput("pitcher", "Select a Pitcher (AAA):",
-                  choices = aaa_pitcher_map$player_name),
-      actionButton("go", "Generate Summary")
+      selectInput("pitcher_aaa", "Select a Pitcher (AAA):",
+                  choices = setNames(
+                    aaa_pitcher_map$player_id,
+                    aaa_pitcher_map$player_name
+                  )),
+      actionButton("go_aaa", "Generate Summary (AAA)")
     ),
     
     mainPanel(
@@ -772,25 +784,46 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   
-  pitcher_id <- eventReactive(input$go, {
+  pitcher_id_mlb <- eventReactive(input$go_mlb, {
     pitcher_map |> 
-      filter(player_name == input$pitcher) |> 
+      filter(player_name == input$pitcher_mlb) |> 
       pull(x_mlbamid) |> 
       as.character()
   })
   
-  observeEvent(pitcher_id(), {
-    print(pitcher_id())
+  pitcher_id_aaa <- eventReactive(input$go_aaa, {
+    as.character(input$pitcher_aaa)
   })
   
-  predictions <- reactive({
-    req(pitcher_id())
-    file_path <- paste0("predictions/", pitcher_id(), ".rds")
-    message("Attempting to load: ", file_path)
+  predictions_mlb <- reactive({
+    req(mode() == "mlb")
+    req(pitcher_id_mlb())
+    file_path <- paste0("predictions/", pitcher_id_mlb(), ".rds")
+    message("Loading MLB: ", file_path)
     readRDS(file_path) |> 
       mutate(game_date = as.Date(game_date))
   })
   
+  predictions_aaa <- reactive({
+    req(mode() == "aaa")
+    req(pitcher_id_aaa())
+    file_path <- paste0("predictions/", pitcher_id_aaa(), "_aaa.rds")
+    message("Loading AAA:", file_path)
+    readRDS(file_path) |> 
+      mutate(game_date = as.Date(game_date))
+  })
+  
+  mode <- reactiveVal(NULL)
+  
+  observeEvent(input$go_mlb, mode("mlb"))
+  observeEvent(input$go_aaa, mode("aaa"))
+  
+  shiny::observe({
+    if (!is.null(pitcher_id_aaa())) {
+      print(pitcher_id_aaa())
+      print(length(pitcher_id_aaa()))
+    }
+  })
   
   df_statcast_grouped <- reactive({
     req(pitcher_id())
@@ -798,11 +831,20 @@ server <- function(input, output, session) {
   })
   
   output$execCard <- renderPlot({
-    req(pitcher_id())
-    execution_plus_card(pitcher_id = pitcher_id(),
-                        predictions = predictions())
+    req(mode())
+    
+    if (mode() == "mlb") {
+      execution_plus_card(
+        pitcher_id = pitcher_id_mlb(),
+        predictions = predictions_mlb()
+      )
+    } else if (mode() == "aaa") {
+      execution_plus_card(
+        pitcher_id = pitcher_id_aaa(),
+        predictions = predictions_aaa()
+      )
+    }
   })
-  
 }
 
 shinyApp(ui, server)

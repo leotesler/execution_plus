@@ -186,13 +186,24 @@ aaa_data <- aaa_data |>
          strikes = factor(strikes))
 
 # generate predictions ----
+swing_code <- c("bunt_foul_tip", "foul", "foul_bunt", "foul_tip",
+                "hit_into_play", "missed_bunt", "swinging_strike", "swinging_strike_blocked")
+whiff_code <- c("swinging_strike", "swinging_strike_blocked", "foul_tip")
+
 aaa_pred <- aaa_data |> 
   bind_cols(predict(bt_fit_final, aaa_data)) |> 
   mutate(pitcher_team = if_else(inning_topbot == "Bot", away_team, home_team),
          opponent = if_else(inning_topbot == "Top", away_team, home_team),
          pitch_grade = percent_rank(.pred)*100,
          balls = as.numeric(balls),
-         strikes = as.numeric(strikes))
+         strikes = as.numeric(strikes),
+         swing = description %in% swing_code,
+         whiff = description %in% whiff_code,
+         in_zone = zone < 10,
+         out_zone = zone > 10,
+         chase = !in_zone & swing,
+         pitch_grade = percent_rank(pitch_grade)*100,
+         pitch_grade = (pitch_grade/mean(pitch_grade, na.rm = TRUE))*100)
 
 # save data ----
 save(aaa_pred, file = "predictions/aaa_2025.rds")
@@ -200,5 +211,7 @@ save(aaa_pred, file = "predictions/aaa_2025.rds")
 aaa_pred |> 
   group_by(pitcher) |> 
   group_walk(~ {
-    saveRDS(.x, paste0("ExecutionPlusApp/predictions/", .y$pitcher, "_aaa.rds"))
+    out_path <- here::here("ExecutionPlusApp", "predictions", paste0(.y$pitcher, "_aaa.rds"))
+    saveRDS(.x, file = out_path)
+    message("Saved ", out_path, " with size: ", file.info(out_path)$size)
   })
