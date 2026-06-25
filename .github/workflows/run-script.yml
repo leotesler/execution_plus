@@ -1,89 +1,80 @@
 name: Run R Script Daily
 
-#on:
-  #schedule:
-    #- cron: "0 9 * * *"
-  #workflow_dispatch: {}
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}inputs:
 
 jobs:
   run-r-script:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          lfs: true
+      - name: Check out repo
+        uses: actions/checkout@v4
 
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
 
-      - name: Install dependencies (CRAN + system)
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev
+
+      - name: Install R packages
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
-            tidyverse
-            httr
-            tidymodels
-            jsonlite
-            magick
-            zoo
-            here
-            rvest
-            gridExtra
-            googledrive
-            scales
-            shiny
-            rsconnect
-            showtext
-            xgboost
-            
-      - name: Install remotes
-        run: Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
-        
+            any::tidyverse
+            any::tidymodels
+            any::here
+            any::rvest
+            any::httr
+            any::jsonlite
+            any::xgboost
+            any::googlesheets4
+            any::rsconnect
+            any::remotes
+            any::base64enc
+
       - name: Install baseballr
-        run: Rscript -e 'remotes::install_github("BillPetti/baseballr", auth_token = Sys.getenv("GITHUB_TOKEN"))'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Download existing file from Google Drive
-  run: |
-    mkdir -p predictions
-    Rscript -e "library(googledrive);
-                library(jsonlite);
-                sa <- jsonlite::fromJSON(Sys.getenv('GDRIVE_SERVICE_ACCOUNT'));
-                tf <- tempfile(fileext = '.json');
-                write_json(sa, tf, auto_unbox = TRUE);
-                drive_auth(path = tf);
+        run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
 
-                folder_id <- '1qowB_L6TfYZWpE4qgNme4yqEv3uWl030'
-                f <- drive_ls(as_id(folder_id), pattern = 'mlb_2025.rds')
+      - name: Restore Google Sheets token
+        run: |
+          mkdir -p ~/.config/gargle
+          echo "${{ secrects.GS4_TOKEN }}" | base64 -d > ~/.config/gargle/7a6077d23f6776ccc63f8f70bc12b214_ltesler194@gmail.com
+        shell: bash
 
-                drive_download(file = f,
-                               path = 'predictions/mlb_2025.rds',
-                               overwrite = TRUE)"
-
-        env:
-          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
-        
       - name: Run script
         run: Rscript processing/reg_season_predictions.R
         env:
-          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
-          
-      - name: Upload to Google Drive
+          FG_COOKIE: ${{ secrets.FG_COOKIE }}
+          GARGLE_OAUTH_CACHE: ~/.config/gargle
+
+      - name: Deploy Shiny app
         run: |
-          Rscript -e 'library(googledrive);
-                      library(jsonlite);
-                      sa <- jsonlite::fromJSON(Sys.getenv("GDRIVE_SERVICE_ACCOUNT"));
-                      tf <- tempfile(fileext = ".json");
-                      write_json(sa, tf, auto_unbox = TRUE);
-                      drive_auth(path = tf);
-                      
-                      folder_id <- "1qowB_L6TfYZWpE4qgNme4yqEv3uWl030"
-                      
-                      drive_upload(media = "predictions/mlb_2025.rds",
-                                   path = as_id(folder_id),
-                                   name = mlb_2025.rds,
-                                   overwrite = TRUE)'
+          Rscript -e '
+            rsconnect::setAccountInfo(
+              name = "leo-tesler-baseball",
+              token = Sys.getenv("SHINYAPPS_TOKEN"),
+              secret - Sys.getenv("SHINYAPPS_SECRET")
+            )
+            rsconnect::deployApp(
+              appDir = "ExecutionPlusApp",
+              forceUpdate = TRUE
+            )
+          '
         env:
-          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+          SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
+          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+
+      - name: Commit updated predictions back to repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add predictions/mlb_2026.rds ExecutionPlusApp/predictions/
+          git diff --staged --quiet || git commit -m "Update predictions [skip ci]"
+          git push
