@@ -1,0 +1,89 @@
+name: Run R Script Daily
+
+#on:
+  #schedule:
+    #- cron: "0 9 * * *"
+  #workflow_dispatch: {}
+
+jobs:
+  run-r-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install dependencies (CRAN + system)
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            tidyverse
+            httr
+            tidymodels
+            jsonlite
+            magick
+            zoo
+            here
+            rvest
+            gridExtra
+            googledrive
+            scales
+            shiny
+            rsconnect
+            showtext
+            xgboost
+            
+      - name: Install remotes
+        run: Rscript -e 'install.packages("remotes", repos="https://cloud.r-project.org")'
+        
+      - name: Install baseballr
+        run: Rscript -e 'remotes::install_github("BillPetti/baseballr", auth_token = Sys.getenv("GITHUB_TOKEN"))'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Download existing file from Google Drive
+  run: |
+    mkdir -p predictions
+    Rscript -e "library(googledrive);
+                library(jsonlite);
+                sa <- jsonlite::fromJSON(Sys.getenv('GDRIVE_SERVICE_ACCOUNT'));
+                tf <- tempfile(fileext = '.json');
+                write_json(sa, tf, auto_unbox = TRUE);
+                drive_auth(path = tf);
+
+                folder_id <- '1qowB_L6TfYZWpE4qgNme4yqEv3uWl030'
+                f <- drive_ls(as_id(folder_id), pattern = 'mlb_2025.rds')
+
+                drive_download(file = f,
+                               path = 'predictions/mlb_2025.rds',
+                               overwrite = TRUE)"
+
+        env:
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+        
+      - name: Run script
+        run: Rscript processing/reg_season_predictions.R
+        env:
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
+          
+      - name: Upload to Google Drive
+        run: |
+          Rscript -e 'library(googledrive);
+                      library(jsonlite);
+                      sa <- jsonlite::fromJSON(Sys.getenv("GDRIVE_SERVICE_ACCOUNT"));
+                      tf <- tempfile(fileext = ".json");
+                      write_json(sa, tf, auto_unbox = TRUE);
+                      drive_auth(path = tf);
+                      
+                      folder_id <- "1qowB_L6TfYZWpE4qgNme4yqEv3uWl030"
+                      
+                      drive_upload(media = "predictions/mlb_2025.rds",
+                                   path = as_id(folder_id),
+                                   name = mlb_2025.rds,
+                                   overwrite = TRUE)'
+        env:
+          GDRIVE_SERVICE_ACCOUNT: ${{ secrets.GDRIVE_SERVICE_ACCOUNT }}
