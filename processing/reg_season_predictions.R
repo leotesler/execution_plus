@@ -12,6 +12,9 @@ library(googledrive)
 library(xgboost)
 library(googlesheets4)
 
+# set Fangraphs cookie ----
+fg_cookie <- Sys.getenv("FG_COOKIE")
+
 # check date ----
 end_date <- as.Date("2026-09-29")
 
@@ -343,7 +346,7 @@ response_sheet <- GET(
   url_sheet,
   add_headers(
     `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    `Cookie` = "fg_uuid=afad3b96-8393-43e7-8643-a3a2fccdd6a8; __qca=P1-203188e0-d25c-4363-a0c6-79aa59e62a14; hb_insticator_uid=51183e81-6ed8-4645-8c7b-57eaf7da4835; _ga=GA1.1.1720851563.1759783885; _ga_757YGY2LKP=GS2.1.s1765995487$o83$g1$t1765995589$j60$l0$h0; cf_clearance=bs8Gkb_.107nqSa9PYc87_B3.959cmG2m4RjW.y2sBQ-1766532043-1.2.1.1-JlIOSuT3P8PsrJRhWjZOCthTRTi3ATooSO_HV4B.pJZM9NOhDOmC28Wt5XtpaS.7m_FZzl2HEEyBdQDA.850VqcB4BgcKFbvin3mqKDovi0N_6R4b3qTpR1DGvHrHnMEvssbJhIYoyCWH331ycq2b22ZwTe2kQ78S.FHwAuo634dejiiQv6OocdlNYNeQAd69ZzQlnsZMoENm0_8FGfp9j4WyvMrMMAa._PQsIYhY4Q; wordpress_logged_in_0cae6f5cb929d209043cb97f8c2eee44=leotesler%7C1798093208%7CkOD76MCavJff6dYmVhOumfeNLAWSCnL0bpzSkmudQLm%7C3eebc9cc36ca8e60509df2c33e0dc7e010322e5ddbf8128fc6ac0d69a46b3aca; wp_automatewoo_visitor_0cae6f5cb929d209043cb97f8c2eee44=lba6jm3qxjwk8ft99lca; _sharedID=6535f10d-0871-472c-9c4b-afebe4269710; _sharedID_cst=zix7LPQsHA%3D%3D; theme-fg_seasonal-banner__feb2026=RANDOM; aym_t_S2S=off; FCCDCF=%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5B32%2C%22%5B%5C%22f28f2458-ddaf-4c41-8941-fa50eb066d65%5C%22%2C%5B1762103721%2C68000000%5D%5D%22%5D%5D%5D; FCNEC=%5B%5B%22AKsRol-a_cJAQyXKrCWhhx9q7_pTFpddsX5sv8ThWA1-8GEYQubV5Sk1DFfjKr_YIPP6buDsXXjj-61N4PqAQKrZ65L8GcCeV38fqVKOXqGaUcYOxtvVluGBauobW5ofZz7MRjukGdqc4we9Z_pzImwti1PNL6pg6A%3D%3D%22%5D%5D",
+    `Cookie` = fg_cookie,
     `Referer` = "https://www.fangraphs.com/leaders/major-league"
   )
 )
@@ -374,7 +377,7 @@ response_bat <- GET(
   url_bat,
   add_headers(
     `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    `Cookie` = "fg_uuid=afad3b96-8393-43e7-8643-a3a2fccdd6a8; __qca=P1-203188e0-d25c-4363-a0c6-79aa59e62a14; hb_insticator_uid=51183e81-6ed8-4645-8c7b-57eaf7da4835; _ga=GA1.1.1720851563.1759783885; _ga_757YGY2LKP=GS2.1.s1765995487$o83$g1$t1765995589$j60$l0$h0; cf_clearance=bs8Gkb_.107nqSa9PYc87_B3.959cmG2m4RjW.y2sBQ-1766532043-1.2.1.1-JlIOSuT3P8PsrJRhWjZOCthTRTi3ATooSO_HV4B.pJZM9NOhDOmC28Wt5XtpaS.7m_FZzl2HEEyBdQDA.850VqcB4BgcKFbvin3mqKDovi0N_6R4b3qTpR1DGvHrHnMEvssbJhIYoyCWH331ycq2b22ZwTe2kQ78S.FHwAuo634dejiiQv6OocdlNYNeQAd69ZzQlnsZMoENm0_8FGfp9j4WyvMrMMAa._PQsIYhY4Q; wordpress_logged_in_0cae6f5cb929d209043cb97f8c2eee44=leotesler%7C1798093208%7CkOD76MCavJff6dYmVhOumfeNLAWSCnL0bpzSkmudQLm%7C3eebc9cc36ca8e60509df2c33e0dc7e010322e5ddbf8128fc6ac0d69a46b3aca; wp_automatewoo_visitor_0cae6f5cb929d209043cb97f8c2eee44=lba6jm3qxjwk8ft99lca; theme-fg_seasonal-banner__feb2026=OFF; _sharedID=2f57b09e-b7e5-4881-a939-b224cf850aea; _sharedID_cst=zix7LPQsHA%3D%3D; pbjs-unifiedid=%7B%22TDID%22%3A%22d74dfa7b-c230-4140-81ff-8a8bc867760b%22%2C%22TDID_LOOKUP%22%3A%22TRUE%22%2C%22TDID_CREATED_AT%22%3A%222026-05-14T23%3A07%3A37%22%7D; pbjs-unifiedid_cst=zix7LPQsHA%3D%3D; aym_t_S2S=off; FCCDCF=%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5B32%2C%22%5B%5C%22f28f2458-ddaf-4c41-8941-fa50eb066d65%5C%22%2C%5B1762103721%2C68000000%5D%5D%22%5D%5D%5D; FCNEC=%5B%5B%22AKsRol-P1pH8CHnzHSdKEv3cAw56IOCyljhZFYgZozkKjsPnh64MQNXZ36N6pH30-FfknPpOF99JYDwRz9UEaSKU8JAdAbKAns05ZylHvUf_BB5ZNps6uF4cwlfV7hDd-lKtopwQe1n3PAIFkIqNDpYhPc8_v6papA%3D%3D%22%5D%5D",
+    `Cookie` = fg_cookie,
     `Referer` = "https://www.fangraphs.com/leaders/major-league"
   )
 )
@@ -382,7 +385,7 @@ response_pit <- GET(
   url_pit,
   add_headers(
     `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    `Cookie` = "fg_uuid=afad3b96-8393-43e7-8643-a3a2fccdd6a8; __qca=P1-203188e0-d25c-4363-a0c6-79aa59e62a14; hb_insticator_uid=51183e81-6ed8-4645-8c7b-57eaf7da4835; _ga=GA1.1.1720851563.1759783885; _ga_757YGY2LKP=GS2.1.s1765995487$o83$g1$t1765995589$j60$l0$h0; cf_clearance=bs8Gkb_.107nqSa9PYc87_B3.959cmG2m4RjW.y2sBQ-1766532043-1.2.1.1-JlIOSuT3P8PsrJRhWjZOCthTRTi3ATooSO_HV4B.pJZM9NOhDOmC28Wt5XtpaS.7m_FZzl2HEEyBdQDA.850VqcB4BgcKFbvin3mqKDovi0N_6R4b3qTpR1DGvHrHnMEvssbJhIYoyCWH331ycq2b22ZwTe2kQ78S.FHwAuo634dejiiQv6OocdlNYNeQAd69ZzQlnsZMoENm0_8FGfp9j4WyvMrMMAa._PQsIYhY4Q; wordpress_logged_in_0cae6f5cb929d209043cb97f8c2eee44=leotesler%7C1798093208%7CkOD76MCavJff6dYmVhOumfeNLAWSCnL0bpzSkmudQLm%7C3eebc9cc36ca8e60509df2c33e0dc7e010322e5ddbf8128fc6ac0d69a46b3aca; wp_automatewoo_visitor_0cae6f5cb929d209043cb97f8c2eee44=lba6jm3qxjwk8ft99lca; theme-fg_seasonal-banner__feb2026=OFF; _sharedID=2f57b09e-b7e5-4881-a939-b224cf850aea; _sharedID_cst=zix7LPQsHA%3D%3D; pbjs-unifiedid=%7B%22TDID%22%3A%22d74dfa7b-c230-4140-81ff-8a8bc867760b%22%2C%22TDID_LOOKUP%22%3A%22TRUE%22%2C%22TDID_CREATED_AT%22%3A%222026-05-14T23%3A07%3A37%22%7D; pbjs-unifiedid_cst=zix7LPQsHA%3D%3D; aym_t_S2S=off; FCCDCF=%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5B32%2C%22%5B%5C%22f28f2458-ddaf-4c41-8941-fa50eb066d65%5C%22%2C%5B1762103721%2C68000000%5D%5D%22%5D%5D%5D; FCNEC=%5B%5B%22AKsRol-P1pH8CHnzHSdKEv3cAw56IOCyljhZFYgZozkKjsPnh64MQNXZ36N6pH30-FfknPpOF99JYDwRz9UEaSKU8JAdAbKAns05ZylHvUf_BB5ZNps6uF4cwlfV7hDd-lKtopwQe1n3PAIFkIqNDpYhPc8_v6papA%3D%3D%22%5D%5D",
+    `Cookie` = fg_cookie,
     `Referer` = "https://www.fangraphs.com/leaders/major-league"
   )
 )
@@ -390,7 +393,7 @@ response_fld <- GET(
   url_fld,
   add_headers(
     `User-Agent` = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-    `Cookie` = "fg_uuid=afad3b96-8393-43e7-8643-a3a2fccdd6a8; __qca=P1-203188e0-d25c-4363-a0c6-79aa59e62a14; hb_insticator_uid=51183e81-6ed8-4645-8c7b-57eaf7da4835; _ga=GA1.1.1720851563.1759783885; _ga_757YGY2LKP=GS2.1.s1765995487$o83$g1$t1765995589$j60$l0$h0; cf_clearance=bs8Gkb_.107nqSa9PYc87_B3.959cmG2m4RjW.y2sBQ-1766532043-1.2.1.1-JlIOSuT3P8PsrJRhWjZOCthTRTi3ATooSO_HV4B.pJZM9NOhDOmC28Wt5XtpaS.7m_FZzl2HEEyBdQDA.850VqcB4BgcKFbvin3mqKDovi0N_6R4b3qTpR1DGvHrHnMEvssbJhIYoyCWH331ycq2b22ZwTe2kQ78S.FHwAuo634dejiiQv6OocdlNYNeQAd69ZzQlnsZMoENm0_8FGfp9j4WyvMrMMAa._PQsIYhY4Q; wordpress_logged_in_0cae6f5cb929d209043cb97f8c2eee44=leotesler%7C1798093208%7CkOD76MCavJff6dYmVhOumfeNLAWSCnL0bpzSkmudQLm%7C3eebc9cc36ca8e60509df2c33e0dc7e010322e5ddbf8128fc6ac0d69a46b3aca; wp_automatewoo_visitor_0cae6f5cb929d209043cb97f8c2eee44=lba6jm3qxjwk8ft99lca; theme-fg_seasonal-banner__feb2026=OFF; _sharedID=2f57b09e-b7e5-4881-a939-b224cf850aea; _sharedID_cst=zix7LPQsHA%3D%3D; pbjs-unifiedid=%7B%22TDID%22%3A%22d74dfa7b-c230-4140-81ff-8a8bc867760b%22%2C%22TDID_LOOKUP%22%3A%22TRUE%22%2C%22TDID_CREATED_AT%22%3A%222026-05-14T23%3A07%3A37%22%7D; pbjs-unifiedid_cst=zix7LPQsHA%3D%3D; aym_t_S2S=off; FCCDCF=%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5B32%2C%22%5B%5C%22f28f2458-ddaf-4c41-8941-fa50eb066d65%5C%22%2C%5B1762103721%2C68000000%5D%5D%22%5D%5D%5D; FCNEC=%5B%5B%22AKsRol-P1pH8CHnzHSdKEv3cAw56IOCyljhZFYgZozkKjsPnh64MQNXZ36N6pH30-FfknPpOF99JYDwRz9UEaSKU8JAdAbKAns05ZylHvUf_BB5ZNps6uF4cwlfV7hDd-lKtopwQe1n3PAIFkIqNDpYhPc8_v6papA%3D%3D%22%5D%5D",
+    `Cookie` = fg_cookie,
     `Referer` = "https://www.fangraphs.com/leaders/major-league"
   )
 )
