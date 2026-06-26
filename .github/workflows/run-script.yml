@@ -38,6 +38,11 @@ jobs:
             any::rsconnect
             any::remotes
             any::base64enc
+            any::gridExtra
+            any::magick
+            any::shiny
+            any::showtext
+            any::zoo
 
       - name: Install baseballr
         run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
