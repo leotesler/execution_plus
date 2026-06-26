@@ -12,8 +12,11 @@ library(googledrive)
 library(xgboost)
 library(googlesheets4)
 
-# set Fangraphs cookie ----
+# set Fangraphs cookie and Google auth ----
 fg_cookie <- Sys.getenv("FG_COOKIE")
+
+options(gargle_oauth_cache = "~/.config/gargle")
+gs4_auth(email = "ltesler194@gmail.com", cache = "~/.config/gargle")
 
 # check date ----
 end_date <- as.Date("2026-09-29")
