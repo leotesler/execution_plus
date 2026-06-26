@@ -41,6 +41,8 @@ jobs:
 
       - name: Install baseballr
         run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Restore Google Sheets token
         run: |
