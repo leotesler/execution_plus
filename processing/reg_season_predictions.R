@@ -176,9 +176,9 @@ bt_fit_final$fit$fit$fit <- xgb.load("scripts/results/bt_booster.xgb")
 
 prior_preds <- readRDS("predictions/mlb_2026.rds")
 
-days <- c(as.character(seq(as.Date("2026-03-25"), as.Date(today() - 1)), by = "days"))
+days <- c(as.character(seq(as.Date("2026-03-25"), as.Date(today() - 1), by = "days")))
 
-days <- as.character(seq(max(prior_preds$game_date) + 1, Sys.Date() - 1), by = "days")
+days <- as.character(seq(max(prior_preds$game_date) + 1, Sys.Date() - 1, by = "days"))
 
 pitchers <- list()
 
