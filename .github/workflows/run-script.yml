@@ -66,12 +66,15 @@ jobs:
             )
             rsconnect::deployApp(
               appDir = "ExecutionPlusApp",
-              forceUpdate = TRUE
+              forceUpdate = TRUE,
+              lint = FALSE,
+              logLevel = "verbose"
             )
           '
         env:
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
-          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }},
+          RSCONNECT_CHECK_PACKAGE_USAGE: "false"
 
       - name: Commit updated predictions back to repo
         run: |
