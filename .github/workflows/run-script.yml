@@ -73,13 +73,13 @@ jobs:
               appDir = "ExecutionPlusApp",
               forceUpdate = TRUE,
               lint = FALSE,
-              logLevel = "verbose"
+              logLevel = "verbose",
+              envManagement = FALSE
             )
           '
         env:
           SHINYAPPS_TOKEN: ${{ secrets.SHINYAPPS_TOKEN }}
-          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }},
-          RSCONNECT_CHECK_PACKAGE_USAGE: "false"
+          SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
 
       - name: Commit updated predictions back to repo
         run: |
