@@ -45,7 +45,7 @@ jobs:
       - name: Restore Google Sheets token
         run: |
           mkdir -p ~/.config/gargle
-          echo "${{ secrects.GS4_TOKEN }}" | base64 -d > ~/.config/gargle/7a6077d23f6776ccc63f8f70bc12b214_ltesler194@gmail.com
+          echo "${{ secrets.GS4_TOKEN }}" | base64 -d > ~/.config/gargle/7a6077d23f6776ccc63f8f70bc12b214_ltesler194@gmail.com
         shell: bash
 
       - name: Run script
