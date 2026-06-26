@@ -440,4 +440,4 @@ range_write(
 )
 
 # re-deploy app ----
-rsconnect::deployApp(appDir = "ExecutionPlusApp")
+#rsconnect::deployApp(appDir = "ExecutionPlusApp")
