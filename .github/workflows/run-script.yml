@@ -60,7 +60,7 @@ jobs:
             rsconnect::setAccountInfo(
               name = "leo-tesler-baseball",
               token = Sys.getenv("SHINYAPPS_TOKEN"),
-              secret - Sys.getenv("SHINYAPPS_SECRET")
+              secret = Sys.getenv("SHINYAPPS_SECRET")
             )
             rsconnect::deployApp(
               appDir = "ExecutionPlusApp",
