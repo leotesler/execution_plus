@@ -35,7 +35,6 @@ jobs:
             any::jsonlite
             any::xgboost
             any::googlesheets4
-            any::rsconnect
             any::remotes
             any::base64enc
             any::gridExtra
@@ -61,6 +60,9 @@ jobs:
           FG_COOKIE: ${{ secrets.FG_COOKIE }}
           GARGLE_OAUTH_CACHE: ~/.config/gargle
 
+      - name: Install rsconnect
+        run: Rscript -e 'remotes::install_version("rsconnect", version = "0.8.29", repos = "https://cloud.r-project.org")'
+
       - name: Deploy Shiny app
         run: |
           Rscript -e '
@@ -73,8 +75,7 @@ jobs:
               appDir = "ExecutionPlusApp",
               forceUpdate = TRUE,
               lint = FALSE,
-              logLevel = "verbose",
-              envManagement = FALSE
+              logLevel = "verbose"
             )
           '
         env:
