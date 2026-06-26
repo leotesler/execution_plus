@@ -42,6 +42,7 @@ jobs:
             any::shiny
             any::showtext
             any::zoo
+            any::progress
 
       - name: Install baseballr
         run: Rscript -e 'remotes::install_github("BillPetti/baseballr")'
