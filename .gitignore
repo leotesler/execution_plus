@@ -9,6 +9,7 @@ scripts/results/bt_fit_final.rda
 scripts/results/var_select_lasso.rda
 scripts/samples/pitch_folds.rda
 predictions/mlb_2025.rds
+predictions/mlb_2026.rds
 predictions/st_2026.rds
 predictions/aaa_2026.rds
 scripts/data/pitch_data.rds
