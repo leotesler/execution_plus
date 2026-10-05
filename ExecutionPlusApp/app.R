@@ -798,16 +798,16 @@ ui <- fluidPage(
     sidebarPanel(
       selectInput("pitcher_mlb", "Select a Pitcher (MLB):",
                   choices = pitcher_map$player_name),
-      actionButton("go_mlb", "Generate Summary (MLB)"),
+      actionButton("go_mlb", "Generate Summary (MLB)")#,
       
-      tags$hr(),
-      
-      selectInput("pitcher_aaa", "Select a Pitcher (AAA):",
-                  choices = setNames(
-                    aaa_pitcher_map$player_id,
-                    aaa_pitcher_map$player_name
-                  )),
-      actionButton("go_aaa", "Generate Summary (AAA)")
+      # tags$hr(),
+      # 
+      # selectInput("pitcher_aaa", "Select a Pitcher (AAA):",
+      #             choices = setNames(
+      #               aaa_pitcher_map$player_id,
+      #               aaa_pitcher_map$player_name
+      #             )),
+      # actionButton("go_aaa", "Generate Summary (AAA)")
     ),
     
     mainPanel(
