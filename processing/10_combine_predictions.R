@@ -5,8 +5,8 @@ library(tidyverse)
 library(googlesheets4)
 
 # load predictions ----
-load("processing/player_ep_mlb_25.rda")
-load("processing/player_ep_aaa_25.rda")
+load("processing/player_ep_mlb_26.rda")
+load("processing/player_ep_aaa_26.rda")
 
 # join datasets ----
 player_ep <- player_ep_mlb |> 
@@ -20,5 +20,5 @@ player_ep <- player_ep_mlb |>
 
 # write to google sheet ----
 sheet_write(player_ep,
-            ss = "1dIH3BHPOGVjCiww6ZSpyLh1TxTNSL7h7pYnd1CYJCiA",
-            sheet = "2025 Execution Plus")
+            ss = "1bcz_P5I4jzxcCUXjLkc77EJeXp_jH0vqfGKPvJDU8q0",
+            sheet = "2026 Execution Plus")

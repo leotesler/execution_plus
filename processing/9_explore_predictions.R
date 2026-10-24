@@ -41,7 +41,7 @@ predictions |>
   arrange(desc(mean_pitch_grade))
 
 # raw data table
-url <- "https://www.fangraphs.com/api/leaders/major-league/data?age=&pos=all&stats=pit&lg=all&qual=0&season=2025&season1=2025&startdate=2025-03-01&enddate=2025-11-01&month=0&hand=&team=0&pageitems=300000&pagenum=1&ind=0&rost=0&players=&type=8&postseason=&sortdir=default&sortstat=WAR"
+url <- "https://www.fangraphs.com/api/leaders/major-league/data?age=&pos=all&stats=pit&lg=all&qual=0&season=2026&season1=2026&startdate=2026-03-01&enddate=2026-11-01&month=0&hand=&team=0&pageitems=300000&pagenum=1&ind=0&rost=0&players=&type=8&postseason=&sortdir=default&sortstat=WAR"
 response <- GET(url)
 page <- content(response, as = "text", encoding = "UTF-8")
 data <- fromJSON(page)
@@ -55,8 +55,8 @@ player_ep_mlb <- predictions |>
   select(!pitcher_name) |> 
   left_join(fg_data, by = join_by(id == x_mlbamid))
 
-save(player_ep_mlb, file = "processing/player_ep_mlb_25.rda")
+save(player_ep_mlb, file = "processing/player_ep_mlb_26.rda")
 
 sheet_write(player_ep, 
             ss = "1dIH3BHPOGVjCiww6ZSpyLh1TxTNSL7h7pYnd1CYJCiA",
-            sheet = "2025 Execution Plus MLB")
+            sheet = "2026 Execution Plus MLB")

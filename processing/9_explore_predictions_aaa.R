@@ -11,7 +11,7 @@ library(jsonlite)
 library(googlesheets4)
 
 # load predictions ----
-load(here("predictions/aaa_2025.rds"))
+load(here("predictions/aaa_2026.rds"))
 
 predictions <- aaa_pred |> 
   mutate(pitch_grade = (pitch_grade/mean(pitch_grade, na.rm = TRUE))*100)
@@ -35,7 +35,7 @@ predictions |>
   filter(n >= 300)
 
 # for google sheets export ----
-url <- "http://statsapi.mlb.com/api/v1/stats?stats=season&sportId=11&season=2025&group=pitching&playerPool=All&limit=20000&offset=0"
+url <- "http://statsapi.mlb.com/api/v1/stats?stats=season&sportId=11&season=2026&group=pitching&playerPool=All&limit=20000&offset=0"
 raw <- fromJSON(url, simplifyVector = FALSE)
 splits <- raw$stats[[1]]$splits
 
@@ -71,9 +71,9 @@ player_ep_aaa <- predictions |>
   select(id = pitcher, execution_plus, player_name) |> 
   left_join(aaa_bf, by = join_by(id == player_id))
 
-save(player_ep_aaa, file = "processing/player_ep_aaa_25.rda")
+save(player_ep_aaa, file = "processing/player_ep_aaa_26.rda")
 
 sheet_write(player_ep,
             ss = "1dIH3BHPOGVjCiww6ZSpyLh1TxTNSL7h7pYnd1CYJCiA",
-            sheet = "2025 Exeuction Plus AAA")
+            sheet = "2026 Exeuction Plus AAA")
   
